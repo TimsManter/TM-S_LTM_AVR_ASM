@@ -1,0 +1,100 @@
+.INCLUDE "M32DEF.INC"
+
+.ORG 0x000 ; Reset
+	RJMP INIT ; Inicjalizacja
+.ORG 0x014 ; Timer 0 Compare
+	RJMP SET_LINES ; Skok do procedury obsługi przerwania Timer 0
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;; INICJALIZACJA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+INIT:                                                                         ;;
+;;;;;;;;;;;; WPISANIE PRZYKLADOWYCH DANYCH DO PAMIECI DANYCH (SRAM) ;;;;;;;;  ;;
+LDI R16, 0b01111111 ; 8                                                   ;;  ;;
+STS 0x0060, R16                                                           ;;  ;;
+                                                                          ;;  ;;
+LDI R16, 0b01101111 ; 9                                                   ;;  ;;
+STS 0x0061, R16                                                           ;;  ;;
+                                                                          ;;  ;;
+LDI R16, 0b00111111 ; 0                                                   ;;  ;;
+STS 0x0062, R16                                                           ;;  ;;
+                                                                          ;;  ;;
+LDI R16, 0b00000110 ; 1                                                   ;;  ;;
+STS 0x0063, R16                                                           ;;  ;;
+                                                                          ;;  ;;
+LDI R26, 0x0060                                                           ;;  ;;
+LD R17, X                                                                 ;;  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  ;;
+                                                                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;; INICJALIZACJA PORTOW ;;;;;;;;;;;;;;;;;;;;;;;;;  ;;
+SER R16                                                                   ;;  ;;
+                                                                          ;;  ;;
+OUT DDRA, R16                                                             ;;  ;;
+OUT DDRB, R16                                                             ;;  ;;
+                                                                          ;;  ;;
+OUT PORTA, R16                                                            ;;  ;;
+OUT PORTB, R16                                                            ;;  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  ;;
+                                                                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;; INICJALIZACJA TIMER 0 ;;;;;;;;;;;;;;;;;;;;;;;;;  ;;
+LDI R16, 255 ; 40 x 8 = 256                                               ;;  ;;
+OUT OCR0, R16                                                             ;;  ;;
+                                                                          ;;  ;;
+LDI R16, (1<<CS01)|(1<<WGM01) ; Preskaler 8 i tryb CTC                    ;;  ;;
+OUT TCCR0, R16                                                            ;;  ;;
+                                                                          ;;  ;;
+LDI R16, (1<<OCIE0) ; Wlaczenie przerwania dla Timer 0 Compare            ;;  ;;
+OUT TIMSK, R16                                                            ;;  ;;
+                                                                          ;;  ;;
+SEI ; Globalne wlaczenie przerwan                                         ;;  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  ;;
+                                                                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; GLOWNA PETLA ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+LOOP:                                                                         ;;
+RJMP LOOP                                                                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;; PROCEDURA PRZERWANIA TIMER 0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SET_LINES:                                                                    ;;
+;;;;;;;;;;;;;;;; USTAWIENIE STANU PORTB (STEROWANIE WYSWIETLACZAMI) ;;;;;;;;  ;;
+                                                                          ;;  ;;
+CPI R26, 0x64  ; Wyzerowanie rejestru przechowujacego numer wyswietlacza  ;;  ;;
+BRNE SKIP                                                                 ;;  ;;
+	LDI R26, 0x60                                                         ;;  ;;
+	LD R17, X                                                             ;;  ;;
+SKIP:                                                                     ;;  ;;
+                                                                          ;;  ;;
+SER R16 ; Zresetowanie stanu portu                                        ;;  ;;
+OUT PORTB, R16                                                            ;;  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  ;;
+                                                                              ;;
+;;;;;;;;;;;;;;;;;;;; USTAWIENIE STANU PORTA (STEROWANIE DIODAMI) ;;;;;;;;;;;  ;;
+LD R17, X                                                                 ;;  ;;
+SER R16                                                                   ;;  ;;
+EOR R17, R16                                                              ;;  ;;
+OUT PORTA, R17                                                            ;;  ;;
+                                                                          ;;  ;;
+                                                                          ;;  ;;
+CPI R26, 0x60                                                             ;;  ;;
+BRNE C0                                                                   ;;  ;;
+	CBI PORTB, 0                                                          ;;  ;;
+C0:                                                                       ;;  ;;
+CPI R26, 0x61                                                             ;;  ;;
+BRNE C1                                                                   ;;  ;;
+	CBI PORTB, 1                                                          ;;  ;;
+C1:                                                                       ;;  ;;
+CPI R26, 0x62                                                             ;;  ;;
+BRNE C2                                                                   ;;  ;;
+	CBI PORTB, 2                                                          ;;  ;;
+C2:                                                                       ;;  ;;
+CPI R26, 0x63                                                             ;;  ;;
+BRNE C3                                                                   ;;  ;;
+	CBI PORTB, 3                                                          ;;  ;;
+C3:                                                                       ;;  ;;
+                                                                          ;;  ;;
+INC R26                                                                   ;;  ;;
+                                                                          ;;  ;;
+RETI                                                                      ;;  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  ;;
+                                                                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
